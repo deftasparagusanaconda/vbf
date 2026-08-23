@@ -1,0 +1,24 @@
+[build-system]
+requires = ['hatchling']
+build-backend = 'hatchling.build'
+
+[project]
+name = 'vbftools'
+version = '0.1.0'
+description = "tools for the .vbf (visual bitmap font) format"
+readme = 'readme.md'
+license = 'MIT'
+requires-python = ">=3.11"
+authors = [{ name = 'deftasparagusanaconda' }]
+
+[project.scripts]
+psf_to_vbf = "vbftools:psf_to_vbf_cli"
+vbf_to_psf = "vbftools:vbf_to_psf_cli"
+
+[tool.hatch.build.targets.wheel]
+include = ["vbftools.py"]
+
+[project.urls]
+Homepage = 'https://github.com/deftasparagusanaconda/vbf'
+Repository = 'https://github.com/deftasparagusanaconda/vbf'
+Issues = 'https://github.com/deftasparagusanaconda/vbf/issues'
