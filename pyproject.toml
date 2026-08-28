@@ -12,8 +12,8 @@ requires-python = ">=3.11"
 authors = [{ name = 'deftasparagusanaconda' }]
 
 [project.scripts]
-psf_to_vbf = "vbftools:psf_to_vbf_cli"
-vbf_to_psf = "vbftools:vbf_to_psf_cli"
+psf2vbf = "vbftools:psf_to_vbf"
+vbf2psf = "vbftools:vbf_to_psf"
 
 [tool.hatch.build.targets.wheel]
 include = ["vbftools.py"]
