@@ -1,4 +1,4 @@
-# vbf (IN DEVELOPMENT)
+# vbf
 
 a **v**isual **b**itmap **f**ont format. you can edit a .vbf font with a text editor like its ASCII art (recommend you use a monospaced font with a 2:1 ratio)
 
@@ -41,8 +41,8 @@ pip install vbftools
 ```
 convert to/from .psf:
 ```
-psf_to_vbf < font.psf > font.vbf
-vbf_to_psf < font.vbf > font.psf
+psf2vbf < font.psf > font.vbf
+vbf2psf < font.vbf > font.psf
 ```
 _(note: psf requires that all glyphs are the same size)_  
 
@@ -51,3 +51,5 @@ show the current font: `showconsolefont`
 compress a font: `gzip font.psf`  
 decompress a font: `gunzip font.psf.gz`  
 find fonts: `man setfont`  
+convert from bdf (using [`psftools`](https://www.seasip.info/Unix/PSF/)): `bdf2psf font.bdf`
+convert to bdf (using [`console-setup`](https://packages.debian.org/stable/bdf2psf)): `psf2bdf font.psf`
