@@ -1,4 +1,4 @@
-from sys import stdin, stdout, stderr
+from sys import stdin, stdout
 
 def decode_header(header: list[str]) -> tuple[str, ...]:
     return tuple(
@@ -7,13 +7,13 @@ def decode_header(header: list[str]) -> tuple[str, ...]:
             for hexcode in sequence.split('U+')[1:])
         for sequence in ''.join(header).replace(' ', '').split(','))
 
-def decode_glyph(glyph: list[str]) -> tuple[tuple[bool, ...], ...]:
-    return tuple(tuple(   
+def decode_glyph(glyph: list[str]) -> list[list[bool]]:
+    return [[   
             {'  ': False, 'XX': True}[window]
             for window in [
                 row[i:i+2]
-                for i in range(0, len(row), 2)])
-        for row in glyph)
+                for i in range(0, len(row), 2)]]
+        for row in glyph]
 
 def decode_box(vbf, row_1st, col_1st) -> tuple[list[str], list[str]]:
     box_width = vbf[row_1st][col_1st+1:].index('*')
@@ -114,7 +114,7 @@ def at(matrix, row, col):
         and 0 <= col < len(matrix[row])
         else None)
 
-def vbf_to_IR(vbf: list[str]) -> dict[tuple[str], list[list[bool]]]:
+def vbf_to_IR(vbf: list[str]) -> dict[tuple[str, ...], list[list[bool]]]:
     boxes = [decode_box(vbf, row, col)
         for row, line in enumerate(vbf)
         for col, char in enumerate(line)
@@ -127,7 +127,7 @@ def vbf_to_IR(vbf: list[str]) -> dict[tuple[str], list[list[bool]]]:
         decode_header(header): decode_glyph(glyph)
         for header, glyph in boxes}
 
-def IR_to_vbf(IR: dict[tuple[str], list[list[bool]]]) -> list[str]:
+def IR_to_vbf(IR: dict[tuple[str, ...], list[list[bool]]]) -> list[str]:
     headers = []
     glyphs = []
     for header, glyph in IR.items():
@@ -160,11 +160,13 @@ def IR_to_vbf(IR: dict[tuple[str], list[list[bool]]]) -> list[str]:
 # to/from psf ------------------------------------------------------------------
 
 PSF1_MAGIC = b'\x36\x04'
+PSF1_SEPARATOR = b'\xFF\xFF'
+PSF1_STARTSEQ = b'\xFF\xFE'
 PSF2_MAGIC = b'\x72\xB5\x4A\x86'
 PSF2_SEPARATOR = b'\xFF'
 PSF2_STARTSEQ = b'\xFE'
 
-def IR_to_psf2(IR: dict[tuple[str], list[list[bool]]]) -> bytes:
+def IR_to_psf2(IR: dict[tuple[str, ...], list[list[bool]]]) -> bytes:
     char_heights = set(len(glyph) for glyph in IR.values())
     char_widths = set(len(glyph[0]) for glyph in IR.values())
 
@@ -211,7 +213,42 @@ def bytes_to_list_of_bool(thebyteof87: bytes) -> list[bool]:
         for byte in thebyteof87 
         for i in range(7, -1, -1)]
 
-def psf2_to_IR(psf: bytes) -> dict[tuple[str], list[list[bool]]]:
+def psf1_to_IR(psf: bytes) -> dict[tuple[str, ...], list[list[bool]]]:
+    headersize = 4
+    width = 8 # limitation of psf1
+    if (magic := psf[0:2]) != PSF1_MAGIC:
+        raise Exception(f'{magic=} != {PSF1_MAGIC=}')
+    length = 512 if psf[2] & 0x01 else 256
+    if not(psf[2] & 0x02):
+        raise Exception(f'this psf file does not have the unicode mappings vbf needs')
+    charsize = height = psf[3]
+    
+    codepoints_start = headersize + charsize * length
+    width_bytes = charsize // height
+    
+    bitmaps = [
+        [   bytes_to_list_of_bool(row)[:width]
+            for row in [
+                glyph[i:i+width_bytes]
+                for i in range(0, charsize, width_bytes)]]
+        for glyph in [
+            psf[i:i+charsize]
+            for i in range(headersize, codepoints_start, charsize)]]
+    
+    unicodes = [
+        tuple(strings[0]) + tuple(strings[1:])
+        for strings in [
+            [   ''.join(
+                    chr(int.from_bytes(two_bytes, 'little')) 
+                    for two_bytes in [
+                        sequence[i:i+2] 
+                        for i in range(0, len(sequence), 2)])
+                for sequence in definition.split(PSF1_STARTSEQ)]
+            for definition in psf[codepoints_start:].split(PSF1_SEPARATOR)[:-1]]]
+    
+    return dict(zip(unicodes, bitmaps, strict=True))
+
+def psf2_to_IR(psf: bytes) -> dict[tuple[str, ...], list[list[bool]]]:
     if (magic := psf[0:4]) != PSF2_MAGIC:
         raise Exception(f'{magic=} != {PSF2_MAGIC=}')
     if (version := int.from_bytes(psf[ 4: 8], 'little')) != 0:
@@ -244,12 +281,6 @@ def psf2_to_IR(psf: bytes) -> dict[tuple[str], list[list[bool]]]:
             for sequences in psf[codepoints_start:].split(PSF2_SEPARATOR)[:-1]]]
     
     return dict(zip(unicodes, bitmaps, strict=True))
-
-# def psf1_to_(psf: bytes) -> dict[tuple[str], list[list[bool]]]:
-#     if (magic := psf[0:2]) != PSF1_MAGIC:
-#         raise Exception(f'{magic=} != {PSF1_MAGIC=}')
-#     mode = 
-#     charsize = 
 
 def vbf_to_psf():
     stdout.buffer.write(IR_to_psf2(vbf_to_IR(stdin.readlines())))
