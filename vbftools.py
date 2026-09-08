@@ -25,7 +25,7 @@ def decode_box(vbf, row_1st, col_1st) -> tuple[list[str], list[str]]:
         if row[0] == '*':
             break
         box_height += 1
-
+	
     header_height = 0
     for row in vbf[row_1st+1:]:
         if len(row) < 2:
@@ -50,7 +50,13 @@ def decode_box(vbf, row_1st, col_1st) -> tuple[list[str], list[str]]:
     glyph = [
         row[glyph_col_start:glyph_col_stop]
         for row in vbf[glyph_row_start:glyph_row_stop]]
-
+	
+    # hacky fix to report misaligned pixels
+    try:
+        decode_glyph(glyph)
+    except KeyError:
+        raise Exception(f'glyph at ({row_1st + 1},{col_1st + 1}) has misaligned pixels')
+    
     return header, glyph
 
 def encode_header(sequences: list[str], header_width: int) -> list[str]:
